@@ -2,6 +2,8 @@ use super::{polled_controller::PolledController, Facing};
 
 use rand::Rng;
 
+/// Basic Polled Controller example of a robot whic will randomly face a different direction on each invocation. 
+/// Just for demonstration purposes.
 #[derive(Default)]
 pub struct RandomController;
 

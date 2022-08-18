@@ -1,21 +1,7 @@
 use crate::{generation::Maze, Point};
-use std::{borrow::{Borrow}, thread, time::Duration, ops::Sub};
+use std::{borrow::{Borrow}, thread, time::Duration};
 
 use super::{private, Facing, Heading, Robot, Tile};
-
-/*
-    TODO Later:
-    - Finish default robot impl
-    - Start on application code (how to actually run the maze)
-    - then threading n stuff
-    - then gui
-
-    Spawn a Maze created by a generator
-    Create a Robot
-    Create a Robot Controller (maybe Wrapped)
-    Give robot & controller maze (they do default setup)
-    Run robot controller until it halts or whatever
-*/
 
 pub struct DefaultRobot {
     active: bool,
@@ -50,7 +36,7 @@ impl Robot for DefaultRobot {
     fn look(&self, face: Facing) -> Self::Tiles {
         let heading = self.heading.augment_heading(face);
         let Point(locx, locy) = self.get_location();
-        let pos = match heading {
+        let pos = match heading { // Panic waiting to happen with these subs if the robot tries to look off the maze
             Heading::North => Point(locx, locy - 1),
             Heading::East => Point(locx + 1, locy),
             Heading::South => Point(locx, locy + 1),
@@ -90,7 +76,7 @@ impl Robot for DefaultRobot {
         self.maze.borrow()
     }
 
-    /// Sleep for a bit
+    /// Sleep for a bit. Time is a microsecond value.
     fn sleep(&self, time: i32) {
         thread::sleep(Duration::from_micros(time as u64))
     }
@@ -126,6 +112,7 @@ impl private::Robot for DefaultRobot {
     /// Advance the robot on. Define at crate level privacy
     /// to stop an external robot controller calling this at the wrong time
     /// Should be implemented by the concrete Robot impl.
+    // BUG: This will panic if robot tries to exit off the top or left side of the maze. 
     fn advance(&mut self) {
         if self.active {
             let Point(locx, locy) = self.get_location();

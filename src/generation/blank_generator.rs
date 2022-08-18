@@ -1,7 +1,7 @@
 use crate::generation::{Generator, Tile, Maze};
 use crate::Point;
 
-/// Example Generator which generates nothing
+/// Example Generator which generates a blank 20x20 maze. The outside is all wall with the inside all passage.
 pub struct BlankGenerator;
 
 impl Generator for BlankGenerator {
