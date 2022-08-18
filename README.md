@@ -20,6 +20,7 @@ fn main() {
 
     controller.set_maze(maze);
     controller.set_delay(10000);
+    print!("{esc}[2J{esc}[H", esc = 27 as char); // If you want to clear the screen before running
     controller.set_poll_callback(Box::new(|robot: &DefaultRobot| {
       // Could put some debug or maze drawing code here
       robot.print();
