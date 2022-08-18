@@ -172,6 +172,9 @@ pub trait Robot: Default {
 
     fn get_collisions(&self) -> i64 { 0 }
 
+    // Print Robot & Maze state out to console
+    fn print(&self) { }
+
 }
 
 mod private {

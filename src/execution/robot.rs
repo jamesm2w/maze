@@ -86,6 +86,60 @@ impl Robot for DefaultRobot {
     fn get_steps(&self) -> i64 { self.steps  }
 
     fn get_collisions(&self) -> i64 { self.collisions }
+
+    /// Print the state of the maze and robot position.
+    /// Bordered by *, recommended to wipe the screen before calling
+    /// as by default uses the (0, 0) cursor position to start drawing.
+    fn print(&self) {
+        let h = self.get_maze().get_height();
+        let w = self.get_maze().get_width();
+        print!("{esc}[H", esc = 27 as char);
+        println!(
+            "Steps: {:?}\tCollisions: {:?}",
+            self.get_steps(),
+            self.get_collisions()
+        );
+
+        for _ in 0..w + 2 {
+            print!("*");
+        }
+
+        print!("\n");
+        for i in 0..h {
+            print!("*");
+            for j in 0..w {
+                let pos = Point(j, i);
+
+                if self.get_location().eq(&pos) {
+                    match self.get_heading() {
+                        Heading::North => print!("^"),
+                        Heading::East => print!(">"),
+                        Heading::South => print!("v"),
+                        Heading::West => print!("<"),
+                    }
+                } else if self.get_goal_location().eq(&pos) {
+                    match self.get_maze().get_cell(Point(j, i)) {
+                        Some(Tile::Passage) => print!("G"),
+                        _ => print!("X")
+                    }
+                } else {
+                    match self.get_maze().get_cell(Point(j, i)) {
+                        None => (),
+                        Some(Tile::Wall) => print!("█"),
+                        Some(Tile::Passage) => print!(" "),
+                        Some(Tile::BeenBefore) => print!("░"),
+                    }
+                }
+            }
+            print!("*\n");
+        }
+
+        for _ in 0..w + 2 {
+            print!("*");
+        }
+
+        print!("\n");
+    }
 }
 
 impl private::Robot for DefaultRobot {

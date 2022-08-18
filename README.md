@@ -22,6 +22,7 @@ fn main() {
     controller.set_delay(10000);
     controller.set_poll_callback(Box::new(|robot: &DefaultRobot| {
       // Could put some debug or maze drawing code here
+      robot.print();
     }));
     controller.start();
 }
