@@ -56,6 +56,7 @@ impl Generator for GappedPrimGenerator {
         let mut frontier = Vec::new();
         let mut random_index;
         
+        // let (ix, iy) = (thread_rng.gen_range(0..self.get_real_width()), thread_rng.gen_range(0..self.get_real_height()));
         let (ix, iy) = (1, 1);
         self.grid[iy][ix] = GridCell::Passage;
         frontier.push(Point(ix, iy));
@@ -69,10 +70,16 @@ impl Generator for GappedPrimGenerator {
             frontier.get(random_index)
         } {
             self.grid[*y][*x] = GridCell::Passage;
-            let mut frontier_around = self.get_frontier_around_point(Point(*x, *y));
+            let frontier_around = self.get_frontier_around_point(Point(*x, *y));
             self.connect_random_neighbour(Point(*x, *y));
             frontier.swap_remove(random_index);
-            frontier.append(&mut frontier_around);
+            
+            for pt in frontier_around {
+                if !frontier.contains(&pt) {
+                    frontier.push(pt);
+                }
+            }
+            // frontier.append(&mut frontier_around);
         }
 
         for y in 0..self.get_real_height() {
@@ -83,6 +90,8 @@ impl Generator for GappedPrimGenerator {
                 });
             }
         }
+        maze.set_start(Point(1, 1));
+        maze.set_finish(Point(self.get_real_width() - 1, self.get_real_height() - 1));
 
         maze
     }
