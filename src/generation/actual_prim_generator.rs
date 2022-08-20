@@ -91,7 +91,7 @@ impl Generator for GappedPrimGenerator {
             }
         }
         maze.set_start(Point(1, 1));
-        maze.set_finish(Point(self.get_real_width() - 1, self.get_real_height() - 1));
+        maze.set_finish(Point(self.get_real_width() - 2, self.get_real_height() - 2));
 
         maze
     }
