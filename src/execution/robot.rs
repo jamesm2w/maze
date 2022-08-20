@@ -76,9 +76,9 @@ impl Robot for DefaultRobot {
         self.maze.borrow()
     }
 
-    /// Sleep for a bit. Time is a microsecond value.
+    /// Sleep for a bit. Time is a millisecond value.
     fn sleep(&self, time: i32) {
-        thread::sleep(Duration::from_micros(time as u64))
+        thread::sleep(Duration::from_millis(time as u64))
     }
 
     fn get_runs(&self) -> i32 { self.runs }

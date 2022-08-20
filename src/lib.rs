@@ -21,11 +21,17 @@ impl Point {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
+#[derive(Debug, Copy, Clone)]
+pub struct GeneratorOptions {
+    pub width: i32,
+    pub height: i32,
+}
+
+impl Default for GeneratorOptions {
+    fn default() -> Self {
+        GeneratorOptions {
+            width: 30,
+            height: 30,
+        }
     }
 }

@@ -1,25 +1,10 @@
 use crate::{
     execution::Tile,
     generation::{Generator, Maze},
-    Point,
+    Point, GeneratorOptions
 };
 use rand::{rngs::ThreadRng, Rng};
 use std::collections::HashSet;
-
-#[derive(Debug, Copy, Clone)]
-pub struct PrimOptions {
-    pub width: i32,
-    pub height: i32,
-}
-
-impl Default for PrimOptions {
-    fn default() -> Self {
-        PrimOptions {
-            width: 15,
-            height: 15,
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CellType {
@@ -30,11 +15,11 @@ pub enum CellType {
 /// Simple generator which uses a Randomised Prim's Algorithm to generate passageways and a maze. 
 #[derive(Debug, Clone)]
 pub struct PrimGenerator {
-    options: PrimOptions,
+    options: GeneratorOptions,
 }
 
 impl Generator for PrimGenerator {
-    type Options = PrimOptions;
+    type Options = GeneratorOptions;
     type Tiles = Tile;
 
     fn new() -> Self {
@@ -120,7 +105,7 @@ impl Generator for PrimGenerator {
         let mut rand_index;
         while let Some((x, y)) = {
             rand_index = if frontier.len() > 1 {
-                thread_rng.gen_range(0..frontier.len())
+                thread_rng.gen_range(0..=frontier.len()-1)
             } else {
                 0
             };
@@ -167,6 +152,15 @@ impl Generator for PrimGenerator {
             };
 
             frontier.swap_remove(rand_index);
+        }
+
+        if let Some(Tile::Wall) = maze.get_cell(Point(1, 1)) {
+
+            if let Some(Tile::Passage) = maze.get_cell(Point(2, 1)) {
+                maze.set_cell(Point(1, 1), Tile::Passage);
+                maze.set_cell(Point(2, 1), Tile::Wall);
+            }
+
         }
 
         maze

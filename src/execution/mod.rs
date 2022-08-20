@@ -11,6 +11,9 @@ pub trait Controller<T: Robot<Tiles=K>, K: TileType + Default> {
     /// Set the robot the controller operates on
     fn set_robot(&mut self, robot: T);
 
+    /// Get the current robot
+    fn get_robot(&self) -> &T;
+
     /// Set the Maze the controller/robot operates on
     fn set_maze(&mut self, maze: Maze<K>);
 

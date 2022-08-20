@@ -48,6 +48,10 @@ impl <R: Robot<Tiles=K> + private::Robot, P: PolledController<R>, K: TileType + 
         self.robot = robot;
     }
 
+    fn get_robot(&self) -> &R {
+        &self.robot
+    }
+
     fn set_maze(&mut self, maze: Maze<K>) {
         let maze = Box::new(maze);
         self.robot.set_maze(maze);

@@ -1,5 +1,6 @@
 pub mod blank_generator;
 pub mod prim_generator;
+pub mod actual_prim_generator;
 
 use std::fmt::Debug;
 
