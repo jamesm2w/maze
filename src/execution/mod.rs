@@ -1,6 +1,7 @@
 use crate::{Point, generation::Maze};
 
 pub mod polled_controller;
+pub mod threaded_controller;
 pub mod random_controller;
 pub mod robot;
 
