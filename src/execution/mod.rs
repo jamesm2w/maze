@@ -4,6 +4,7 @@ pub mod polled_controller;
 pub mod threaded_controller;
 pub mod random_controller;
 pub mod robot;
+pub mod threaded_robot;
 
 /// This trait is what the student implements -- 
 /// the brains of the robot is a type which can run certain
@@ -195,7 +196,7 @@ mod private {
         fn set_location(&mut self, loc: Point);
 
         /// Reset everything
-        fn reset(&self);
+        fn reset(&mut self);
 
         /// Set where the robots target is
         fn set_target_location(&mut self, loc: Point);

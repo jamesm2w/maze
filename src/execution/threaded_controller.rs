@@ -1,24 +1,24 @@
 use std::{
-    sync::{mpsc::Sender, Arc, Mutex},
+    sync::{mpsc::Sender, Arc, Mutex, RwLock},
 };
 
-use crate::{Point, generation::Maze};
+use crate::{Point, execution::Maze};
 
-use super::{polled_controller::PolledController, private, Controller, Heading, Robot, TileType};
-
+use super::{polled_controller::PolledController, private, Controller, Heading, Robot, threaded_robot::ThreadedRobot};
+use super::Tile;
 /// ThreadedController implementation
-pub trait ThreadedController<R: Robot>: Default {
-    fn control_robot(&mut self, robot: &mut R);
+pub trait ThreadedController: Default {
+    fn control_robot(&mut self, robot: &mut ThreadedRobot);
 
     fn reset(&self) {}
 }
 
 /// Blanket implementation to allow PolledControllers to be used as ThreadedControllers with no issue
-impl<R: Robot, T> ThreadedController<R> for T
+impl<T> ThreadedController for T
 where
-    T: PolledController<R>,
+    T: PolledController<ThreadedRobot>,
 {
-    fn control_robot(&mut self, robot: &mut R) {
+    fn control_robot(&mut self, robot: &mut ThreadedRobot) {
         self.control_robot(robot);
     }
 
@@ -28,34 +28,27 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct ThreadedRobotProgress<T: TileType + Default + Clone> {
+pub struct ThreadedRobotProgress {
     pub finished: bool,
     pub robot_pos: Point,
     pub target_loc: Point,
-    pub robot_head: Heading,
-    pub maze: Maze<T>
+    pub robot_head: Heading
 }
 
 #[derive(Default)]
-pub struct ThreadedControllerWrapper<C, R, T>
-where
-    C: ThreadedController<R> + Default,
-    R: Robot,
-    T: TileType + Default + Clone
+pub struct ThreadedControllerWrapper<C: ThreadedController>
 {
-    controller: C,
-    robot: R,
+    robot: ThreadedRobot,
     active: Arc<Mutex<bool>>,
     thread_delay: Arc<Mutex<i32>>,
-    progress_sender: Option<Sender<ThreadedRobotProgress<T>>>,
-    latest_robot_update: Arc<Mutex<Option<ThreadedRobotProgress<T>>>>,
+    progress_sender: Arc<Mutex<Option<Sender<ThreadedRobotProgress>>>>,
+    latest_robot_update: Arc<Mutex<Option<ThreadedRobotProgress>>>,
+    controller: C,
 }
 
-impl<T, R, C> Controller<R, T> for ThreadedControllerWrapper<C, R, T>
-where
-    T: TileType + Default + Clone,
-    R: Robot<Tiles = T> + private::Robot,
-    C: ThreadedController<R>,
+impl<C> Controller<ThreadedRobot, Tile> for ThreadedControllerWrapper<C>
+where 
+    C: ThreadedController
 {
     fn get_name(&self) -> &str {
         "Threaded Polled Controller"
@@ -65,11 +58,11 @@ where
         "Based Multi-Threaded Robot Controller"
     }
 
-    fn get_robot(&self) -> &R {
+    fn get_robot(&self) -> &ThreadedRobot {
         &self.robot
     }
 
-    fn set_robot(&mut self, robot: R) {
+    fn set_robot(&mut self, robot: ThreadedRobot) {
         self.robot = robot;
     }
 
@@ -85,20 +78,13 @@ where
         *del = delay;
     }
 
-    fn set_maze(&mut self, maze: crate::generation::Maze<T>) {
-        self.robot.set_maze(Box::new(maze));
+    fn set_maze(&mut self, maze: crate::generation::Maze<Tile>) {
+        self.robot.set_maze(Arc::new(RwLock::from(maze)));
     }
 
     fn start(&mut self) {
-        match self.active.lock() {
-            Ok(mut val) => *val = true,
-            Err(_) => (),
-        };
 
-        while !self
-            .robot
-            .get_location()
-            .eq(&self.robot.get_goal_location())
+        while !Robot::get_location(&self.robot).eq(&self.robot.get_goal_location())
             && match self.active.lock() {
                 Ok(val) => *val,
                 Err(_) => false,
@@ -106,9 +92,10 @@ where
         {
             self.controller.control_robot(&mut self.robot);
 
-            self.robot.advance();
+            private::Robot::advance(&mut self.robot);
 
             // (self.callback)(&mut self.robot);
+            // println!("loc {:?}\ttarget_loc {:?}\theading {:?}", self.robot.get_location(), self.robot.get_goal_location(), self.robot.get_heading());
             self.send_robot_update(false);
             
             if match self.thread_delay.lock() {
@@ -135,25 +122,28 @@ where
     }
 }
 
-impl<C, R, T> ThreadedControllerWrapper<C, R, T>
-where
-    C: ThreadedController<R>,
-    R: Robot<Tiles = T>,
-    T: TileType + Default + Clone
-{
+impl<C: ThreadedController> ThreadedControllerWrapper<C> {
     pub fn new(
         active: Arc<Mutex<bool>>,
         thread_delay: Arc<Mutex<i32>>,
-        progress_sender: Option<Sender<ThreadedRobotProgress<T>>>,
-        latest_robot_update: Arc<Mutex<Option<ThreadedRobotProgress<T>>>>,
+        latest_robot_update: Arc<Mutex<Option<ThreadedRobotProgress>>>,
     ) -> Self {
         Self {
             active,
             thread_delay,
-            progress_sender,
             latest_robot_update,
             ..Default::default()
         }
+    }
+
+    pub fn set_maze_ref(&mut self, maze: Arc<RwLock<Maze<Tile>>>) {
+        if !*self.active.lock().unwrap() {
+            self.robot.set_maze(maze);
+        } 
+    }
+
+    pub fn set_sender(&mut self, tx: Sender<ThreadedRobotProgress>) {
+        self.progress_sender = Arc::from(Mutex::from(Some(tx)));
     }
 
     pub fn send_robot_update(&mut self, finished: bool) {
@@ -161,22 +151,23 @@ where
             finished,
             robot_head: self.robot.get_heading(),
             robot_pos: self.robot.get_location(),
-            target_loc: self.robot.get_goal_location(),
-            maze: self.robot.get_maze().clone()
+            target_loc: self.robot.get_goal_location()
         };
 
-        match &self.progress_sender {
-            Some(sender) => {
-                let send_res = sender.send(message.clone());
-                match send_res {
-                    Ok(_) => match self.latest_robot_update.lock() {
-                        Ok(mut opt_val) => *opt_val = Some(message),
-                        Err(_) => (),
-                    },
-                    Err(err) => println!("{:?}", err),
+        match self.progress_sender.lock() {
+            Ok(lock) => {
+                if let Some(sender) = &*lock {
+                    let send_res = sender.send(message.clone());
+                    match send_res {
+                        Ok(_) => match self.latest_robot_update.lock() {
+                            Ok(mut opt_val) => *opt_val = Some(message),
+                            Err(_) => (),
+                        },
+                        Err(err) => println!("{:?}", err),
+                    }
                 }
             }
-            None => (),
+            _ => (),
         }
     }
 }

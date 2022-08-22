@@ -156,7 +156,7 @@ impl private::Robot for DefaultRobot {
     }
 
     /// Reset everything
-    fn reset(&self) {}
+    fn reset(&mut self) {}
 
     /// Set where the robots target is
     fn set_target_location(&mut self, loc: Point) {
